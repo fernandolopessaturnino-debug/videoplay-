@@ -1,0 +1,264 @@
+```html
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Videoplay</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: #0b1020;
+      color: #f8fafc;
+      font-family: Arial, sans-serif;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 18px 24px;
+      background: #141b2e;
+      border-bottom: 1px solid #29334c;
+    }
+
+    h1 {
+      margin: 0;
+      color: #7cafff;
+      font-size: 24px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 9px;
+      padding: 12px 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    #login {
+      background: #fff;
+      color: #222;
+    }
+
+    main {
+      width: min(1000px, 92%);
+      margin: 28px auto;
+    }
+
+    .intro {
+      color: #bdc7dc;
+      line-height: 1.5;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 20px 0;
+    }
+
+    .primary {
+      background: #3478f6;
+      color: white;
+    }
+
+    #busca {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0 18px;
+      border: 1px solid #35415c;
+      border-radius: 9px;
+      background: #141b2e;
+      color: white;
+      font-size: 16px;
+    }
+
+    #lista {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 16px;
+    }
+
+    .item {
+      padding: 14px;
+      background: #141b2e;
+      border: 1px solid #29334c;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .nome {
+      display: block;
+      margin-bottom: 10px;
+      overflow-wrap: anywhere;
+    }
+
+    video,
+    audio {
+      display: block;
+      width: 100%;
+    }
+
+    video {
+      background: #000;
+      border-radius: 8px;
+    }
+
+    #mensagem {
+      color: #bdc7dc;
+    }
+
+    @media (max-width: 520px) {
+      header {
+        padding: 16px;
+      }
+
+      h1 {
+        font-size: 20px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Reprodutor de vídeo</h1>
+    <button id="login" type="button">Entrar com Google</button>
+  </header>
+
+  <main>
+    <h2>Videoplay</h2>
+
+    <p class="intro">
+      Escolha arquivos de áudio e vídeo do seu dispositivo para reproduzi-los.
+      Seus arquivos não são enviados para este site.
+    </p>
+
+    <div class="actions">
+      <button class="primary" id="selecionar" type="button">
+        Selecionar arquivos
+      </button>
+
+      <button class="primary" id="selecionarPasta" type="button">
+        Selecionar pasta
+      </button>
+    </div>
+
+    <!-- accept="*/*" deixa o seletor mostrar vários tipos de arquivo.
+         O site adiciona à lista apenas áudio e vídeo compatíveis. -->
+    <input id="arquivos" type="file" accept="*/*" multiple hidden>
+    <input
+      id="pasta"
+      type="file"
+      accept="*/*"
+      webkitdirectory
+      multiple
+      hidden
+    >
+
+    <input id="busca" type="search" placeholder="Buscar arquivo...">
+
+    <p id="mensagem">Nenhum arquivo selecionado.</p>
+    <section id="lista"></section>
+  </main>
+
+  <script>
+    const arquivosInput = document.getElementById("arquivos");
+    const pastaInput = document.getElementById("pasta");
+    const lista = document.getElementById("lista");
+    const mensagem = document.getElementById("mensagem");
+    const busca = document.getElementById("busca");
+    const urls = [];
+
+    document.getElementById("selecionar").addEventListener("click", () => {
+      arquivosInput.click();
+    });
+
+    document.getElementById("selecionarPasta").addEventListener("click", () => {
+      pastaInput.click();
+    });
+
+    document.getElementById("login").addEventListener("click", () => {
+      alert(
+        "O login com Google precisa ser configurado com credenciais do Google Identity Services ou Firebase."
+      );
+    });
+
+    function mostrarArquivos(arquivos) {
+      urls.forEach(url => URL.revokeObjectURL(url));
+      urls.length = 0;
+      lista.replaceChildren();
+
+      const compativeis = Array.from(arquivos).filter(arquivo => {
+        const tipo = arquivo.type || "";
+        const nome = arquivo.name.toLowerCase();
+
+        return (
+          tipo.startsWith("audio/") ||
+          tipo.startsWith("video/") ||
+          /\.(mp4|webm|ogg|mov|m4v|mp3|wav|m4a|aac|flac|opus)$/i.test(nome)
+        );
+      });
+
+      mensagem.textContent = compativeis.length
+        ? `${compativeis.length} arquivo(s) de áudio ou vídeo selecionado(s).`
+        : "Nenhum áudio ou vídeo compatível encontrado.";
+
+      for (const arquivo of compativeis) {
+        const url = URL.createObjectURL(arquivo);
+        urls.push(url);
+
+        const cartao = document.createElement("article");
+        cartao.className = "item";
+        cartao.dataset.nome = arquivo.name.toLowerCase();
+
+        const nome = document.createElement("strong");
+        nome.className = "nome";
+        nome.textContent = arquivo.name;
+
+        const tipo = arquivo.type || "";
+        const extensao = arquivo.name.split(".").pop().toLowerCase();
+        const extensoesVideo = ["mp4", "webm", "ogg", "mov", "m4v"];
+        const ehVideo =
+          tipo.startsWith("video/") || extensoesVideo.includes(extensao);
+
+        const player = document.createElement(ehVideo ? "video" : "audio");
+        player.src = url;
+        player.controls = true;
+        player.preload = "metadata";
+
+        cartao.append(nome, player);
+        lista.appendChild(cartao);
+      }
+    }
+
+    arquivosInput.addEventListener("change", () => {
+      mostrarArquivos(arquivosInput.files);
+    });
+
+    pastaInput.addEventListener("change", () => {
+      mostrarArquivos(pastaInput.files);
+    });
+
+    busca.addEventListener("input", () => {
+      const termo = busca.value.toLowerCase();
+
+      document.querySelectorAll(".item").forEach(item => {
+        item.hidden = !item.dataset.nome.includes(termo);
+      });
+    });
+
+    window.addEventListener("beforeunload", () => {
+      urls.forEach(url => URL.revokeObjectURL(url));
+    });
+  </script>
+</body>
+</html>
+```
